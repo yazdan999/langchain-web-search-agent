@@ -1,4 +1,6 @@
-fastapi
-uvicorn
-numpy
-pytest
+
+langchain
+streamlit
+boto3
+duckduckgo-search
+python-dotenv
