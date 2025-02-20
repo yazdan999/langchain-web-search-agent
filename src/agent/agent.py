@@ -1,23 +1,22 @@
-
-from langchain.agents import initialize_agent, Tool, AgentType
-from langchain.agents import DuckDuckGoSearchRun
-from langchain.llms import Bedrock
 import os
+import streamlit as st
+import boto3
 from dotenv import load_dotenv
+from langchain.agents import initialize_agent, Tool, AgentType
+from langchain.tools import DuckDuckGoSearchRun
+from langchain.llms import Bedrock
 
 # Load environment variables
 load_dotenv()
 
 # Initialize Amazon Bedrock model
 def get_bedrock_model():
-    # You can adjust this part based on the model you're using on Bedrock
-    model = Bedrock(api_key=os.getenv('AMAZON_BEDROCK_API_KEY'))
-    return model
+    client = boto3.client("bedrock-runtime", region_name="us-east-1")  # Change region if needed
+    return Bedrock(client=client, model_id="anthropic.claude-v2")  # Use the right model ID
 
 # Initialize DuckDuckGo Search tool
 def get_duckduckgo_search_tool():
-    search_tool = DuckDuckGoSearchRun(api_key=os.getenv('DUCKDUCKGO_API_KEY'))
-    return search_tool
+    return DuckDuckGoSearchRun()  # No API key needed
 
 # LangChain agent function
 def create_agent(query):
@@ -29,23 +28,28 @@ def create_agent(query):
         Tool(
             name="DuckDuckGoSearchRun",
             func=search_tool.run,
-            description="Search the web for information"
-        ),
-        Tool(
-            name="AmazonBedrock",
-            func=bedrock_model.predict,
-            description="Generate text based on the search results"
+            description="Search the web for information."
         )
     ]
 
-    # Initialize the agent with the tools
+    # Initialize the agent
     agent = initialize_agent(
-        tools, 
-        agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        tools=tools, 
         llm=bedrock_model,
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         verbose=True
     )
     
     # Get the agent's response
     response = agent.run(query)
     return response
+
+# Streamlit UI
+st.title("AI Web Search Agent")
+query = st.text_input("Enter your search query:")
+
+if query:
+    st.write("🔍 Searching...")
+    response = create_agent(query)
+    st.write("### AI Response")
+    st.write(response)
